@@ -1,0 +1,51 @@
+{
+    "apiVersion": "batch/v1",
+    "kind": "Job",
+    "metadata": {
+        "name": "my-job",
+        "namespace": "test"
+    },
+    "spec": {
+        "template": {
+            "spec": {
+                "containers": [
+                    {
+                        "name": "my-job-container",
+                        "image": "nginx:latest",
+                        "command": [
+                            "/bin/sh",
+                            "-c"
+                        ],
+                        "args": [
+                            "cp /usr/share/nginx/html/hello.txt /usr/share/job-pod/hello.txt && while true; do sleep 3600; done"
+                        ],
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/usr/share/job-pod",
+                                "name": "job-volume"
+                            },
+                            {
+                                "mountPath": "/usr/share/nginx/html",
+                                "name": "source-volume"
+                            }
+                        ]
+                    }
+                ],
+                "volumes": [
+                    {
+                        "name": "job-volume",
+                        "emptyDir": {}
+                    },
+                    {
+                        "name": "source-volume",
+                        "persistentVolumeClaim": {
+                            "claimName": "source-pvc"
+                        }
+                    }
+                ],
+                "restartPolicy": "Never"
+            }
+        },
+        "backoffLimit": 4
+    }
+}
