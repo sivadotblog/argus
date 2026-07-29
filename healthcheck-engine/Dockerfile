@@ -3,7 +3,7 @@ WORKDIR /app
 COPY pyproject.toml ./
 COPY uv.lock ./
 COPY src/ ./src/
-RUN uv export --frozen --no-dev -o requirements.txt && \
+RUN uv export --frozen --no-dev --no-editable -o requirements.txt && \
     uv pip install --system --no-cache --compile-bytecode -r requirements.txt
 
 FROM python:3.12-slim
