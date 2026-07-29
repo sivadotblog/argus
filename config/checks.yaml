@@ -1,0 +1,41 @@
+heartbeat_interval_seconds: 60
+
+vault:
+  addr: "https://vault.example.internal:8200"
+  azure_auth_role: "healthcheck-engine"
+  mount_point: "azure"
+
+checks:
+  - name: "github-status"
+    type: "public_api"
+    interval_seconds: 120
+    params:
+      url: "https://www.githubstatus.com/api/v2/status.json"
+
+  - name: "internal-api-noauth"
+    type: "public_api"
+    interval_seconds: 120
+    params:
+      url: "https://myservice.internal.example.com/healthz"
+      degraded_latency_ms: 1500
+
+  - name: "github-api-authed"
+    type: "auth_api"
+    interval_seconds: 120
+    params:
+      url: "https://api.github.com/rate_limit"
+      vault_path: "healthchecks/github"
+      auth_style: "bearer"
+
+  - name: "terraform-cloud"
+    type: "auth_api"
+    interval_seconds: 120
+    params:
+      url: "https://app.terraform.io/api/v2/account/details"
+      vault_path: "healthchecks/terraform"
+      auth_style: "bearer"
+
+  # TODO(sonnet): once connectors exist —
+  # - azure_status / google_status entries (interval 300)
+  # - vnet_capacity + quota entries (interval 900)
+  # - database entry with vault_path + engine: postgres

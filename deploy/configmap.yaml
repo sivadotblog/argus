@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: healthcheck-engine-config
+  namespace: platform-monitoring
+data:
+  checks.yaml: |
+    # paste config/checks.yaml content here (or template via kustomize/helm later)
