@@ -38,10 +38,11 @@ class FakeConnection:
     """Stands in for asyncpg.Connection: fetchval + close, both awaitable."""
 
     def __init__(self, fetchval_result: object = 1, fetchval_exc: Exception | None = None,
-                 on_sleep: float = 0.0) -> None:
+                 on_sleep: float = 0.0, close_exc: Exception | None = None) -> None:
         self._fetchval_result = fetchval_result
         self._fetchval_exc = fetchval_exc
         self._on_sleep = on_sleep
+        self._close_exc = close_exc
         self.closed = False
 
     async def fetchval(self, query: str) -> object:
@@ -54,6 +55,8 @@ class FakeConnection:
 
     async def close(self) -> None:
         self.closed = True
+        if self._close_exc is not None:
+            raise self._close_exc
 
 
 def make_cfg(**params: object) -> ConnectorConfig:
@@ -145,6 +148,25 @@ async def test_fetchval_failure_still_closes_connection() -> None:
 
     with patch("asyncpg.connect", new=AsyncMock(return_value=fake_conn)):
         result = await connector.check()
+
+    assert result.status == CheckStatus.ERROR
+    assert result.error_type == ErrorType.INTERNAL
+    assert fake_conn.closed is True
+
+
+async def test_close_raising_after_fetchval_failure_does_not_escape_check() -> None:
+    """asyncpg's Connection.close() is not exception-safe: on an already-bad connection
+    it internally _abort()s but then re-raises. check() must swallow that so a failed
+    close can never violate the "must never raise" contract from base.py — it must
+    return a CheckResult (from the original fetchval failure), not raise out of check().
+    """
+    fake_conn = FakeConnection(fetchval_exc=RuntimeError("boom"),
+                               close_exc=RuntimeError("close also failed"))
+    creds = FakeCredentialManager(SECRET)
+    connector = DatabaseConnector(make_cfg(), creds)  # type: ignore[arg-type]
+
+    with patch("asyncpg.connect", new=AsyncMock(return_value=fake_conn)):
+        result = await connector.check()  # must not raise
 
     assert result.status == CheckStatus.ERROR
     assert result.error_type == ErrorType.INTERNAL

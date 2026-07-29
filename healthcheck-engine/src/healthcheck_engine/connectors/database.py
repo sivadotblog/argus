@@ -99,7 +99,16 @@ class DatabaseConnector(Connector):
                                latency_ms=(time.perf_counter() - start) * 1000, metadata=metadata)
         finally:
             if conn is not None:
-                await conn.close()
+                # asyncpg's close() is not exception-safe: on a connection that's
+                # already gone bad it internally _abort()s (so the socket is still
+                # cleaned up either way) but then re-raises. A raise out of `finally`
+                # would escape check()'s own try/except and violate the "must never
+                # raise" contract from base.py, so swallow it here — the connector
+                # already reports its own outcome via the CheckResult returned above.
+                try:
+                    await conn.close()
+                except Exception:
+                    pass
 
     _ENGINE_CHECKS: ClassVar[
         dict[str, Callable[[DatabaseConnector, dict[str, str]], Awaitable[CheckResult]]]
