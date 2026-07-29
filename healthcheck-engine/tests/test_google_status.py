@@ -191,3 +191,50 @@ async def test_connection_error_is_error_with_connection_error_type() -> None:
 
     assert result.status == CheckStatus.ERROR
     assert result.error_type == ErrorType.CONNECTION
+
+
+@respx.mock
+async def test_substring_service_match() -> None:
+    # A config entry with the short "Compute Engine" substring must match a real
+    # incident whose service_name is the full "Google Compute Engine" — this is the
+    # matching semantic that shipped configs (config/checks.yaml) rely on, and it now
+    # mirrors azure_status.py's case-insensitive substring matching against titles.
+    respx.get(GOOGLE_INCIDENTS_URL).mock(
+        return_value=httpx.Response(
+            200, json=[incident(service_name="Google Compute Engine", severity="high")]
+        )
+    )
+    connector = GoogleStatusConnector(make_cfg(services=["Compute Engine"]), None)
+
+    result = await connector.check()
+
+    assert result.status == CheckStatus.DOWN
+    assert result.metadata["matched_services"] == ["Google Compute Engine"]
+
+
+@respx.mock
+async def test_case_insensitive_service_match() -> None:
+    respx.get(GOOGLE_INCIDENTS_URL).mock(
+        return_value=httpx.Response(
+            200, json=[incident(service_name="Google Compute Engine", severity="high")]
+        )
+    )
+    connector = GoogleStatusConnector(make_cfg(services=["compute engine"]), None)
+
+    result = await connector.check()
+
+    assert result.status == CheckStatus.DOWN
+
+
+@respx.mock
+async def test_non_matching_substring_is_ok() -> None:
+    respx.get(GOOGLE_INCIDENTS_URL).mock(
+        return_value=httpx.Response(
+            200, json=[incident(service_name="Google Cloud Storage", severity="high")]
+        )
+    )
+    connector = GoogleStatusConnector(make_cfg(services=["Compute Engine"]), None)
+
+    result = await connector.check()
+
+    assert result.status == CheckStatus.OK

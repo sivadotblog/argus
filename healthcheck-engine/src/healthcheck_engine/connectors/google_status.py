@@ -13,9 +13,12 @@ GOOGLE_INCIDENTS_URL = "https://status.cloud.google.com/incidents.json"
 
 class GoogleStatusConnector(Connector):
     """params:
-    services: list[str]            (required) — Google Cloud service names to filter on,
-                                    matched against each incident's `service_name` field
-                                    (as it appears in incidents.json).
+    services: list[str]            (required) — substrings matched case-insensitively against
+                                    each incident's `service_name` field (as it appears in
+                                    incidents.json), e.g. "Compute Engine" matches a
+                                    service_name of "Google Compute Engine". This mirrors
+                                    azure_status.py's matching semantic so both status
+                                    connectors behave the same way.
     active_only: bool = True       — if true, only incidents with no `end` timestamp
                                     (still ongoing) count as affecting status.
 
@@ -63,7 +66,8 @@ class GoogleStatusConnector(Connector):
             matched: list[dict[str, Any]] = []
             for incident in incidents:
                 service_name = incident["service_name"]
-                if service_name not in services:
+                service_name_lower = str(service_name).lower()
+                if not any(service.lower() in service_name_lower for service in services):
                     continue
                 if active_only and incident.get("end") is not None:
                     continue

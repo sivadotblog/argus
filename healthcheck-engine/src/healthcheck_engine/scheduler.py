@@ -28,7 +28,21 @@ class Scheduler:
                 result = CheckResult(source=conn.name, check_type=conn.cfg.type,
                                      status=CheckStatus.ERROR, error_type=ErrorType.INTERNAL,
                                      error_detail=repr(exc))
-            emit(result)
+            try:
+                emit(result)
+            except Exception:
+                # emit() itself must never be allowed to escape this loop: an unguarded
+                # failure here (e.g. a non-JSON-serializable value slipping into
+                # `result.metadata`) would propagate through asyncio.gather() in
+                # Scheduler.run() and kill every other connector's loop along with it.
+                # Fall back to a minimal, always-serializable CheckResult — deliberately
+                # omitting the original metadata, since that's the likely culprit.
+                try:
+                    emit(CheckResult(source=conn.name, check_type=conn.cfg.type,
+                                     status=CheckStatus.ERROR, error_type=ErrorType.INTERNAL,
+                                     error_detail="failed to emit result"))
+                except Exception:
+                    pass
             self._ran_last_cycle.add(conn.name)
             elapsed = time.perf_counter() - started
             await asyncio.sleep(max(1.0, conn.cfg.interval_seconds - elapsed))

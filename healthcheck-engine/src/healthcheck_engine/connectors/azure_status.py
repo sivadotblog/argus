@@ -26,7 +26,11 @@ def _entry_title(entry: ET.Element) -> str | None:
 class AzureStatusConnector(Connector):
     """params:
     services: list[str]    (required) — substrings matched case-insensitively against
-                            each feed entry's title.
+                            each feed entry's title. This is the same matching semantic
+                            used by google_status.py (against `service_name` there) — kept
+                            identical across both status connectors deliberately, since
+                            public feeds' exact service naming can change without notice
+                            and substring matching is more forgiving than exact equality.
 
     Fetches Azure's public status feed and looks for entries whose title mentions one
     of the configured services.

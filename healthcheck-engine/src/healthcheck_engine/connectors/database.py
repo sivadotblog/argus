@@ -9,10 +9,13 @@ database: str                  (required for postgres)
 vault_path: str                (required) — same meaning as in auth_api.py: secret
                                   at this Vault path has "username"/"password" keys.
 vault_mount: str = "secret"
-degraded_latency_ms: float = 500   — DB checks should be fast: a SELECT 1 over an
-                                      established-per-check connection taking >500ms
-                                      already signals trouble (lower than the HTTP
-                                      connectors' 2000ms default).
+degraded_latency_ms: float = 2000  — measured from BEFORE asyncpg.connect() to after
+                                      the SELECT 1 completes, so this is connect-inclusive
+                                      latency (TCP connect + TLS + Postgres auth handshake
+                                      + query), not query-only. A cross-AZ/cross-region
+                                      Postgres connection routinely exceeds a few hundred ms
+                                      on connect alone, so the default matches the HTTP
+                                      connectors' 2000ms default rather than being lower.
 
 Every DB op happens inside the scheduler's wait_for(timeout_seconds) ceiling — hung
 connections are the norm, not the exception, so asyncpg.connect() is itself given
@@ -35,8 +38,11 @@ class DatabaseConnector(Connector):
         p = self.cfg.params
         engine: str = p.get("engine", "postgres")
 
-        assert self.creds is not None, f"{self.name}: database connector requires vault config"
         try:
+            if self.creds is None:
+                return CheckResult(source=self.name, check_type=self.cfg.type,
+                                   status=CheckStatus.ERROR, error_type=ErrorType.AUTH,
+                                   error_detail="database connector requires vault config")
             secret = await self.creds.get_secret(p["vault_path"], p.get("vault_mount", "secret"))
         except Exception as exc:
             return CheckResult(source=self.name, check_type=self.cfg.type,
@@ -55,7 +61,7 @@ class DatabaseConnector(Connector):
         host: str = p["host"]
         port: int = p.get("port", 5432)
         database: str = p["database"]
-        degraded_latency_ms: float = p.get("degraded_latency_ms", 500)
+        degraded_latency_ms: float = p.get("degraded_latency_ms", 2000)
         metadata = {"engine": "postgres", "host": host, "database": database}
 
         start = time.perf_counter()

@@ -107,6 +107,28 @@ async def test_degraded_when_latency_exceeds_threshold() -> None:
     assert fake_conn.closed is True
 
 
+async def test_default_degraded_threshold_is_2000ms_connect_inclusive_not_500ms() -> None:
+    # 600ms of (mocked) connect-inclusive latency must stay OK under the current 2000ms
+    # default — under the old 500ms default this would have been wrongly DEGRADED, which
+    # is exactly the false-alarm behavior this default change fixes for realistic
+    # cross-AZ/cross-region Postgres connect times.
+    fake_conn = FakeConnection()
+    creds = FakeCredentialManager(SECRET)
+    connector = DatabaseConnector(make_cfg(), creds)  # type: ignore[arg-type]
+
+    with (
+        patch("asyncpg.connect", new=AsyncMock(return_value=fake_conn)),
+        patch(
+            "healthcheck_engine.connectors.database.time.perf_counter",
+            side_effect=[0.0, 0.6],
+        ),
+    ):
+        result = await connector.check()
+
+    assert result.status == CheckStatus.OK
+    assert result.latency_ms == 600.0
+
+
 async def test_connect_timeout_is_down_with_timeout_error_type() -> None:
     creds = FakeCredentialManager(SECRET)
     connector = DatabaseConnector(make_cfg(), creds)  # type: ignore[arg-type]
@@ -182,6 +204,20 @@ async def test_unknown_engine_is_error_with_internal_error_type() -> None:
     assert result.status == CheckStatus.ERROR
     assert result.error_type == ErrorType.INTERNAL
     assert "mysql" in (result.error_detail or "")
+
+
+async def test_missing_creds_is_error_with_auth_error_type_and_does_not_raise() -> None:
+    # self.creds is None (e.g. no vault: block in EngineConfig) — check() must return a
+    # CheckResult, not raise AssertionError, per the "must never raise" contract in base.py.
+    connector = DatabaseConnector(make_cfg(), None)  # type: ignore[arg-type]
+
+    with patch("asyncpg.connect", new=AsyncMock()) as mock_connect:
+        result = await connector.check()  # must not raise
+
+    assert result.status == CheckStatus.ERROR
+    assert result.error_type == ErrorType.AUTH
+    assert "vault config" in (result.error_detail or "")
+    mock_connect.assert_not_awaited()
 
 
 async def test_vault_secret_failure_is_error_with_auth_error_type_and_no_connect_attempt() -> None:
