@@ -35,7 +35,53 @@ checks:
       vault_path: "healthchecks/terraform"
       auth_style: "bearer"
 
-  # TODO(sonnet): once connectors exist —
-  # - azure_status / google_status entries (interval 300)
-  # - vnet_capacity + quota entries (interval 900)
-  # - database entry with vault_path + engine: postgres
+  - name: "azure-status-feed"
+    type: "azure_status"
+    interval_seconds: 300
+    params:
+      services:
+        - "Virtual Network"
+        - "Azure Database for PostgreSQL"
+
+  - name: "google-status-feed"
+    type: "google_status"
+    interval_seconds: 300
+    params:
+      services:
+        - "Compute Engine"
+        - "Cloud SQL"
+      active_only: true
+
+  - name: "prod-vnet-capacity"
+    type: "vnet_capacity"
+    interval_seconds: 900
+    params:
+      vnets:
+        - subscription_id: "<SUBSCRIPTION_ID>"
+          resource_group: "rg-prod-networking"
+          vnet_name: "vnet-prod-eastus"
+          subnet_name: "snet-app"
+      degraded_pct: 80
+      down_pct: 95
+
+  - name: "prod-compute-quota"
+    type: "quota"
+    interval_seconds: 900
+    params:
+      scopes:
+        - scope: "/subscriptions/<SUBSCRIPTION_ID>/providers/Microsoft.Compute/locations/eastus"
+          resource_name: "standardDSv3Family"
+      degraded_pct: 80
+      down_pct: 95
+
+  - name: "prod-postgres"
+    type: "database"
+    interval_seconds: 120
+    params:
+      engine: "postgres"
+      host: "prod-db.internal.example.com"
+      port: 5432
+      database: "appdb"
+      vault_path: "healthchecks/prod-postgres"
+      vault_mount: "secret"
+      degraded_latency_ms: 500
