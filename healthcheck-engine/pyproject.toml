@@ -55,5 +55,6 @@ module = [
     "azure.mgmt.network",
     "azure.mgmt.quota",
     "yaml",
+    "asyncpg",
 ]
 ignore_missing_imports = true

@@ -3,6 +3,7 @@ from __future__ import annotations
 from .auth_api import AuthApiConnector
 from .azure_status import AzureStatusConnector
 from .base import Connector
+from .database import DatabaseConnector
 from .google_status import GoogleStatusConnector
 from .public_api import PublicApiConnector
 from .quota import QuotaConnector
@@ -15,5 +16,5 @@ REGISTRY: dict[str, type[Connector]] = {
     "google_status": GoogleStatusConnector,
     "vnet_capacity": VnetCapacityConnector,
     "quota": QuotaConnector,
-    # TODO(sonnet): register database
+    "database": DatabaseConnector,
 }
