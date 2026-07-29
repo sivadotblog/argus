@@ -6,13 +6,13 @@ If a breaking change is unavoidable, bump schema_version and coordinate Splunk s
 from __future__ import annotations
 
 import time
-from enum import StrEnum
+from enum import Enum
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 
-class CheckStatus(StrEnum):
+class CheckStatus(str, Enum):  # noqa: UP042
     OK = "ok"
     DEGRADED = "degraded"
     DOWN = "down"
@@ -20,7 +20,7 @@ class CheckStatus(StrEnum):
     ERROR = "error"       # the ENGINE failed (auth, network policy, bug) — not the target
 
 
-class ErrorType(StrEnum):
+class ErrorType(str, Enum):  # noqa: UP042
     NONE = "none"
     TIMEOUT = "timeout"
     CONNECTION = "connection"        # likely NSG/firewall/DNS — not necessarily target down

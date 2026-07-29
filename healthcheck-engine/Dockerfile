@@ -3,7 +3,8 @@ WORKDIR /app
 COPY pyproject.toml ./
 COPY uv.lock ./
 COPY src/ ./src/
-RUN uv pip install --system --no-cache --compile-bytecode -r /dev/stdin < <(uv export --frozen --no-dev)
+RUN uv export --frozen --no-dev -o requirements.txt && \
+    uv pip install --system --no-cache --compile-bytecode -r requirements.txt
 
 FROM python:3.12-slim
 RUN useradd --uid 10001 --no-create-home app
