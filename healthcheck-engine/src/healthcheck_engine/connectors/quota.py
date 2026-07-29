@@ -6,11 +6,12 @@ import time
 from typing import Any
 
 from azure.core.exceptions import AzureError, ClientAuthenticationError
-from azure.identity.aio import DefaultAzureCredential
+from azure.identity.aio import ClientSecretCredential
 from azure.mgmt.quota.aio import QuotaMgmtClient
 from azure.mgmt.quota.models import LimitObject
 
-from ..schema import CheckResult, CheckStatus, ErrorType
+from ..credentials import CredentialManager, resolve_spn_credential
+from ..schema import CheckResult, CheckStatus, ConnectorConfig, ErrorType
 from .base import Connector
 
 _SUBSCRIPTION_ID_RE = re.compile(r"/subscriptions/([^/]+)", re.IGNORECASE)
@@ -33,10 +34,24 @@ class QuotaConnector(Connector):
                                     "standardDSv3Family".
     degraded_pct: float = 80
     down_pct: float = 95
+    vault_path: str                (optional) — Vault path of a DISTINCT SPN to use for
+                                    this check instead of the shared engine SPN; the secret
+                                    must have "tenant_id"/"client_id"/"client_secret" keys.
+    vault_mount: str = "secret"     (only meaningful together with vault_path)
 
-    Uses DefaultAzureCredential directly (no Vault) with azure.mgmt.quota.aio.QuotaMgmtClient
-    (the async client) to read current usage (usages.get) and limit (quota.get) for each
-    configured scope/resource_name pair, computing pct_used = usage / limit * 100.
+    Authenticates with an explicit service principal (azure.identity.aio.
+    ClientSecretCredential) — never DefaultAzureCredential, whose cascading resolution is
+    unpredictable in a container. By default that is the shared engine SPN from
+    AZURE_TENANT_ID/AZURE_CLIENT_ID/AZURE_CLIENT_SECRET; setting `vault_path` sources a
+    distinct SPN from Vault instead (see credentials.resolve_spn_credential). The credential
+    is built lazily on the first check() and cached on the instance for the process
+    lifetime — never rebuilt or closed per check (ClientSecretCredential refreshes its own
+    tokens internally), and no lock is needed since the scheduler runs a connector's check()
+    calls serially.
+
+    Uses azure.mgmt.quota.aio.QuotaMgmtClient (the async client) to read current usage
+    (usages.get) and limit (quota.get) for each configured scope/resource_name pair,
+    computing pct_used = usage / limit * 100.
 
     QuotaMgmtClient's constructor requires a subscription_id even though the usages/quota REST
     calls are fully addressed by the `scope` string and don't otherwise use it — we extract it
@@ -46,10 +61,22 @@ class QuotaConnector(Connector):
     Overall CheckResult.status is the worst status across all configured scopes;
     metadata["scopes"] carries the per-scope breakdown.
 
-    Fail-soft: any Azure SDK/auth failure maps to status=ERROR (never raises) —
-    ClientAuthenticationError -> error_type=AUTH, other azure.core.exceptions.AzureError ->
-    error_type=CONNECTION, anything else unanticipated -> error_type=INTERNAL.
+    Fail-soft: any Azure SDK/auth failure maps to status=ERROR (never raises) — credential
+    sourcing failures (missing env vars, missing vault config, Vault read failure, Vault
+    secret missing keys) and ClientAuthenticationError -> error_type=AUTH, other
+    azure.core.exceptions.AzureError -> error_type=CONNECTION, anything else unanticipated
+    -> error_type=INTERNAL.
     """
+
+    def __init__(self, cfg: ConnectorConfig, creds: CredentialManager | None) -> None:
+        super().__init__(cfg, creds)
+        # Populated on the first check() and reused thereafter — see class docstring.
+        self._credential: ClientSecretCredential | None = None
+
+    async def _get_credential(self) -> ClientSecretCredential:
+        if self._credential is None:
+            self._credential = await resolve_spn_credential(self.cfg.params, self.creds)
+        return self._credential
 
     async def check(self) -> CheckResult:
         p = self.cfg.params
@@ -59,9 +86,22 @@ class QuotaConnector(Connector):
 
         start = time.perf_counter()
         try:
+            credential = await self._get_credential()
+        except Exception as exc:
+            # Everything that can go wrong while sourcing the SPN is an auth-domain
+            # problem: missing env vars, vault_path set without vault config, a failed
+            # Vault read, or a Vault secret missing tenant_id/client_id/client_secret.
+            return CheckResult(
+                source=self.name,
+                check_type=self.cfg.type,
+                status=CheckStatus.ERROR,
+                error_type=ErrorType.AUTH,
+                error_detail=str(exc)[:500],
+                latency_ms=(time.perf_counter() - start) * 1000,
+            )
+        try:
             scope_results: list[dict[str, Any]] = []
             async with contextlib.AsyncExitStack() as stack:
-                credential = await stack.enter_async_context(DefaultAzureCredential())
                 clients: dict[str, QuotaMgmtClient] = {}
                 for entry in scopes:
                     scope = entry["scope"]

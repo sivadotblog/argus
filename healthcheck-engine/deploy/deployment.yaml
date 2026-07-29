@@ -23,6 +23,22 @@ spec:
           env:
             - name: CHECKS_CONFIG
               value: /etc/healthcheck/checks.yaml
+            # All Azure auth uses an explicit service principal (never
+            # DefaultAzureCredential / cascading credential resolution). These three
+            # standard Azure SDK variables are REQUIRED: the engine fails fast at
+            # startup if any is missing. Create the Secret out-of-band, e.g.
+            #   kubectl -n platform-monitoring create secret generic healthcheck-engine-spn \
+            #     --from-literal=tenant-id=... --from-literal=client-id=... \
+            #     --from-literal=client-secret=...
+            - name: AZURE_TENANT_ID
+              valueFrom:
+                secretKeyRef: { name: healthcheck-engine-spn, key: tenant-id }
+            - name: AZURE_CLIENT_ID
+              valueFrom:
+                secretKeyRef: { name: healthcheck-engine-spn, key: client-id }
+            - name: AZURE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef: { name: healthcheck-engine-spn, key: client-secret }
           volumeMounts:
             - name: config
               mountPath: /etc/healthcheck

@@ -48,10 +48,18 @@ checks:
     interval_seconds: 300
     params:
       services:
-        - "Compute Engine"
-        - "Cloud SQL"
+        - "Compute Engine"      # matches "Google Compute Engine" service_name (substring)
+        - "Cloud SQL"           # matches "Google Cloud SQL" service_name (substring)
       active_only: true
 
+  # The Azure checks below (vnet_capacity, quota) authenticate with an explicit service
+  # principal — never DefaultAzureCredential. By default they use the shared engine SPN
+  # from the AZURE_TENANT_ID / AZURE_CLIENT_ID / AZURE_CLIENT_SECRET environment
+  # variables (the same SPN CredentialManager uses to log in to Vault). To use a DISTINCT
+  # SPN for a given check, add the optional params:
+  #   vault_path: "healthchecks/azure-spn-readonly"   # secret keys: tenant_id,
+  #   vault_mount: "secret"                           # client_id, client_secret
+  # which requires the global `vault:` block above to be configured.
   - name: "prod-vnet-capacity"
     type: "vnet_capacity"
     interval_seconds: 900
@@ -84,4 +92,5 @@ checks:
       database: "appdb"
       vault_path: "healthchecks/prod-postgres"
       vault_mount: "secret"
-      degraded_latency_ms: 500
+      # degraded_latency_ms omitted — inherits the connector's 2000ms default, which
+      # is connect-inclusive (TCP + TLS + Postgres auth handshake + query), not query-only.

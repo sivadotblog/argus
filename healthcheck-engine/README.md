@@ -57,10 +57,16 @@ docker run --rm \
 
 Kubernetes manifests live in `deploy/`:
 
-- `deploy/serviceaccount.yaml` — the ServiceAccount used for Azure Workload
-  Identity. Its `azure.workload.identity/client-id` annotation is a
-  placeholder (`<MANAGED_IDENTITY_CLIENT_ID>`) — fill in the managed
-  identity's client ID for the target environment.
+- `deploy/serviceaccount.yaml` — the ServiceAccount the pod runs as. Its
+  `azure.workload.identity/*` annotation/label are inert as far as this engine
+  is concerned: all Azure authentication is explicit service-principal
+  authentication (`ClientSecretCredential`), never `DefaultAzureCredential`.
+  The SPN is supplied through the `AZURE_TENANT_ID` / `AZURE_CLIENT_ID` /
+  `AZURE_CLIENT_SECRET` environment variables wired in
+  `deploy/deployment.yaml` from a `healthcheck-engine-spn` Secret — the engine
+  fails fast at startup if any of the three is missing. A check may override
+  this with a distinct SPN by adding an optional `vault_path` param (secret
+  keys: `tenant_id`, `client_id`, `client_secret`).
 - `deploy/configmap.yaml` — supplies `checks.yaml` to the container via a
   mounted volume. Its `data.checks.yaml` content must be kept in sync with
   `config/checks.yaml` — paste the real config in (or template it with
