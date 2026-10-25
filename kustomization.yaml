@@ -1,0 +1,19 @@
+# Kustomize sits at the repository root because it only reads files at or below its
+# own directory, and the collector configs live in config/.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - deploy/k8s/serviceaccount.yaml
+  - deploy/k8s/deployment.yaml
+
+# A config change gives the ConfigMap a new hash suffix, which rolls the Deployment.
+configMapGenerator:
+  - name: argus-config
+    files:
+      - config/base.yaml
+      - config/public.yaml
+      - config/azure.yaml
+      - config/atlas.yaml
+      - config/snowflake-logs.yaml
+      - config/full.yaml

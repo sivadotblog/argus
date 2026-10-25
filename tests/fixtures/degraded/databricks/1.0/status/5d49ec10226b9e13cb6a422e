@@ -1,0 +1,242 @@
+{
+  "result": {
+    "status_overall": {
+      "updated": "2026-10-17T19:00:04.696Z",
+      "status": "Degraded Performance",
+      "status_code": 300
+    },
+    "status": [
+      {
+        "id": "5d49eeb84ab01f12fda8026e",
+        "name": "Compute",
+        "status": "Degraded Performance",
+        "status_code": 300,
+        "containers": [
+          {
+            "id": "5d49ee55fa249612f1cd0d9a",
+            "name": "West Europe",
+            "updated": "2026-10-10T18:00:07.674Z",
+            "status": "Operational",
+            "status_code": 100
+          },
+          {
+            "id": "5d49ee197ee8ce12c9029d80",
+            "name": "East US 2",
+            "updated": "2026-10-10T18:00:06.199Z",
+            "status": "Operational",
+            "status_code": 100
+          },
+          {
+            "id": "5d49ee1474e2ab138f842a9c",
+            "name": "East US",
+            "updated": "2026-10-10T18:00:07.205Z",
+            "status": "Degraded Performance",
+            "status_code": 300
+          }
+        ],
+        "updated": "2026-10-17T19:00:04.693Z"
+      },
+      {
+        "id": "60ac08a0ffceea0534710be6",
+        "name": "Databricks SQL",
+        "status": "Operational",
+        "status_code": 100,
+        "containers": [
+          {
+            "id": "5d49ee55fa249612f1cd0d9a",
+            "name": "West Europe",
+            "updated": "2026-10-10T18:00:07.672Z",
+            "status": "Operational",
+            "status_code": 100
+          },
+          {
+            "id": "5d49ee197ee8ce12c9029d80",
+            "name": "East US 2",
+            "updated": "2026-10-10T18:00:06.203Z",
+            "status": "Operational",
+            "status_code": 100
+          },
+          {
+            "id": "5d49ee1474e2ab138f842a9c",
+            "name": "East US",
+            "updated": "2026-10-10T18:00:07.219Z",
+            "status": "Operational",
+            "status_code": 100
+          }
+        ],
+        "updated": "2026-10-17T19:00:04.658Z"
+      }
+    ],
+    "incidents": [],
+    "maintenance": {
+      "active": [],
+      "upcoming": [
+        {
+          "_id": "6ac593d4d492610581e1c764",
+          "datetime_planned_end": "2026-10-28T18:30:00.000Z",
+          "datetime_planned_start": "2026-10-28T16:30:00.000Z",
+          "name": "Azure Database Planned Maintenance",
+          "datetime_open": "2026-10-07T00:35:32.210Z",
+          "messages": [
+            {
+              "details": "A maintenance event is scheduled to occur between 16:30 UTC and 18:30 UTC on October 28, 2026. You may encounter the following impact during this maintenance, which should not exceed 10 minutes:\r\n\r\n- Workspace authentication requests may fail or timeout.\r\n- Cluster start/resize/termination requests may fail or time out.\r\n- Jobs relying on cluster start/resize/termination may not execute.\r\n- Jobs submitted through APIs/Schedulers may not execute.\r\n- UI and Databricks SQL queries may time out.\r\n- Users may experience failures launching Databricks SQL Serverless Warehouses.\r\n- Users may not be able to access UC APIs.\r\n\r\nCurrently running jobs may be interrupted.",
+              "state": 100,
+              "status": 200,
+              "datetime": "2026-10-07T00:35:32.253Z"
+            }
+          ],
+          "containers_affected": [
+            {
+              "_id": "5d49ee0017238612ddc2ab01",
+              "name": "Central India"
+            }
+          ],
+          "components_affected": [
+            {
+              "_id": "64074a210f35d90534fe1f95",
+              "name": "Agent Bricks"
+            },
+            {
+              "_id": "62686399c541cb04cfd48e63",
+              "name": "AI/BI"
+            },
+            {
+              "_id": "5d49eeb84ab01f12fda8026e",
+              "name": "Compute"
+            },
+            {
+              "_id": "686415fe8c580704cf0eabc7",
+              "name": "Databricks Apps"
+            },
+            {
+              "_id": "60ac08a0ffceea0534710be6",
+              "name": "Databricks SQL"
+            },
+            {
+              "_id": "6a4565558614df05b03737a7",
+              "name": "Genie"
+            },
+            {
+              "_id": "6863da94edb26105d3ff3614",
+              "name": "Lakebase"
+            },
+            {
+              "_id": "5d8be7499984a254035c9cf6",
+              "name": "Lakeflow"
+            },
+            {
+              "_id": "5d49eefa2de8310d2f80affb",
+              "name": "Notebooks"
+            },
+            {
+              "_id": "64b11a5b721ece0537079c3e",
+              "name": "Unity Catalog"
+            }
+          ]
+        },
+        {
+          "_id": "6ac593bd7b771c055e55255e",
+          "datetime_planned_end": "2026-10-28T17:30:00.000Z",
+          "datetime_planned_start": "2026-10-28T16:30:00.000Z",
+          "name": "Azure Database Planned Maintenance",
+          "datetime_open": "2026-10-07T00:35:09.222Z",
+          "messages": [
+            {
+              "details": "A maintenance event is scheduled to occur between 16:30 UTC and 17:30 UTC on October 28, 2026. You may encounter the following impact during this maintenance, which should not exceed 5 minutes:\r\n\r\n- Workspace authentication requests may fail or timeout.\r\n- Cluster start/resize/termination requests may fail or time out.\r\n- Jobs relying on cluster start/resize/termination may not execute.\r\n- Jobs submitted through APIs/Schedulers may not execute.\r\n- UI and Databricks SQL queries may time out.\r\n- Users may experience failures launching Databricks SQL Serverless Warehouses.\r\n- Users may not be able to access UC APIs.\r\n\r\nCurrently running jobs may be interrupted.",
+              "state": 100,
+              "status": 200,
+              "datetime": "2026-10-07T00:35:09.236Z"
+            }
+          ],
+          "containers_affected": [
+            {
+              "_id": "5d49ee422de8310d2f80aff8",
+              "name": "South India"
+            }
+          ],
+          "components_affected": [
+            {
+              "_id": "62686399c541cb04cfd48e63",
+              "name": "AI/BI"
+            },
+            {
+              "_id": "5d49eeb84ab01f12fda8026e",
+              "name": "Compute"
+            },
+            {
+              "_id": "60ac08a0ffceea0534710be6",
+              "name": "Databricks SQL"
+            },
+            {
+              "_id": "6a4565558614df05b03737a7",
+              "name": "Genie"
+            },
+            {
+              "_id": "5d8be7499984a254035c9cf6",
+              "name": "Lakeflow"
+            },
+            {
+              "_id": "5d49eefa2de8310d2f80affb",
+              "name": "Notebooks"
+            },
+            {
+              "_id": "64b11a5b721ece0537079c3e",
+              "name": "Unity Catalog"
+            }
+          ]
+        },
+        {
+          "_id": "6ac59399d88a450599f6680a",
+          "datetime_planned_end": "2026-10-28T17:30:00.000Z",
+          "datetime_planned_start": "2026-10-28T16:30:00.000Z",
+          "name": "Azure Database Planned Maintenance",
+          "datetime_open": "2026-10-07T00:34:33.221Z",
+          "messages": [
+            {
+              "details": "A maintenance event is scheduled to occur between 16:30 UTC and 17:30 UTC on October 28, 2026. You may encounter the following impact during this maintenance, which should not exceed 5 minutes:\r\n\r\n- Workspace authentication requests may fail or timeout.\r\n- Cluster start/resize/termination requests may fail or time out.\r\n- Jobs relying on cluster start/resize/termination may not execute.\r\n- Jobs submitted through APIs/Schedulers may not execute.\r\n- UI and Databricks SQL queries may time out.\r\n- Users may experience failures launching Databricks SQL Serverless Warehouses.\r\n- Users may not be able to access UC APIs.\r\n\r\nCurrently running jobs may be interrupted.",
+              "state": 100,
+              "status": 200,
+              "datetime": "2026-10-07T00:34:33.250Z"
+            }
+          ],
+          "containers_affected": [
+            {
+              "_id": "5d49ee5aa8b254164900a4dd",
+              "name": "West India"
+            }
+          ],
+          "components_affected": [
+            {
+              "_id": "62686399c541cb04cfd48e63",
+              "name": "AI/BI"
+            },
+            {
+              "_id": "5d49eeb84ab01f12fda8026e",
+              "name": "Compute"
+            },
+            {
+              "_id": "60ac08a0ffceea0534710be6",
+              "name": "Databricks SQL"
+            },
+            {
+              "_id": "6a4565558614df05b03737a7",
+              "name": "Genie"
+            },
+            {
+              "_id": "5d8be7499984a254035c9cf6",
+              "name": "Lakeflow"
+            },
+            {
+              "_id": "5d49eefa2de8310d2f80affb",
+              "name": "Notebooks"
+            },
+            {
+              "_id": "64b11a5b721ece0537079c3e",
+              "name": "Unity Catalog"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

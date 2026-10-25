@@ -1,0 +1,33 @@
+# Offline test rig for tests/fixtures.sh: the public profile against recorded feeds.
+# The network is internal, so the collector cannot reach the real vendors.
+# Required: FIXTURE_VARIANT (healthy | degraded), ARGUS_OUT (writable output directory).
+
+name: argus-fixtures
+
+networks:
+  fixtures:
+    internal: true
+
+services:
+  fixtures:
+    image: busybox:1.37.0
+    command: ["httpd", "-f", "-p", "8080", "-h", "/www"]
+    volumes:
+      - ./fixtures/${FIXTURE_VARIANT:?set FIXTURE_VARIANT}:/www:ro
+    networks: [fixtures]
+
+  argus:
+    image: otel/opentelemetry-collector-contrib:0.162.0
+    command:
+      - --config=/etc/argus/base.yaml
+      - --config=/etc/argus/public.yaml
+    environment:
+      SNOWFLAKE_STATUS_BASE_URL: http://fixtures:8080/snowflake
+      DATABRICKS_STATUS_BASE_URL: http://fixtures:8080/databricks
+      HASHICORP_STATUS_BASE_URL: http://fixtures:8080/hashicorp
+      WEB_CHECK_URL: http://fixtures:8080/web/
+    volumes:
+      - ../config:/etc/argus:ro
+      - ${ARGUS_OUT:?set ARGUS_OUT}:/var/lib/argus
+    depends_on: [fixtures]
+    networks: [fixtures]

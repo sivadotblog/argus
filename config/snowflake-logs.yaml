@@ -1,0 +1,100 @@
+# Argus Snowflake layer: ACCOUNT_USAGE login, access, and query history as log records.
+# Status: configured and validated, not tested live (no credentials in this repo).
+#
+# Prerequisites:
+#   - A role with IMPORTED PRIVILEGES on the SNOWFLAKE database, and a warehouse.
+#   - ACCESS_HISTORY needs Snowflake Enterprise Edition or higher.
+#   - URL-encode special characters in SNOWFLAKE_PASSWORD (it is part of a DSN).
+#
+# How each row is read once:
+#   - The receiver stores TRACKING_TS of the last row and binds it to "?" on the next run.
+#     file_storage keeps that value across restarts.
+#   - ACCOUNT_USAGE views fill in late (LOGIN_HISTORY up to 2 h, ACCESS_HISTORY up to
+#     3 h, QUERY_HISTORY up to 45 min). Each query reads only rows older than that
+#     latency, so no late row can land behind the stored value.
+#   - LIMIT 1000 bounds one busy interval. Known limit: if more than 1000 rows share
+#     the exact boundary timestamp, the rows after the limit are skipped.
+#
+# QUERY_HISTORY bodies contain query text. Treat the output as sensitive.
+
+extensions:
+  file_storage:
+    directory: /var/lib/argus/storage
+    create_directory: true
+
+receivers:
+  sqlquery/snowflake_login_history:
+    driver: snowflake
+    datasource: "${env:SNOWFLAKE_USER}:${env:SNOWFLAKE_PASSWORD}@${env:SNOWFLAKE_ACCOUNT}/SNOWFLAKE/ACCOUNT_USAGE?warehouse=${env:SNOWFLAKE_WAREHOUSE}&role=${env:SNOWFLAKE_ROLE}"
+    storage: file_storage
+    collection_interval: 300s
+    queries:
+      - sql: |
+          SELECT TO_VARCHAR(EVENT_TIMESTAMP, 'YYYY-MM-DD"T"HH24:MI:SS.FF9TZH:TZM') AS TRACKING_TS,
+                 COALESCE(USER_NAME, '') AS USER_NAME,
+                 COALESCE(IS_SUCCESS, '') AS IS_SUCCESS,
+                 TO_JSON(OBJECT_CONSTRUCT(*)) AS BODY
+          FROM SNOWFLAKE.ACCOUNT_USAGE.LOGIN_HISTORY
+          WHERE EVENT_TIMESTAMP > TO_TIMESTAMP_TZ(?, 'YYYY-MM-DD"T"HH24:MI:SS.FF9TZH:TZM')
+            AND EVENT_TIMESTAMP <= DATEADD(hour, -2, CURRENT_TIMESTAMP())
+          ORDER BY EVENT_TIMESTAMP
+          LIMIT 1000
+        tracking_column: TRACKING_TS
+        tracking_start_value: "${env:SNOWFLAKE_LOGS_START:-2026-10-25T00:00:00.000000000+00:00}"
+        logs:
+          - body_column: BODY
+            attribute_columns: [USER_NAME, IS_SUCCESS]
+
+  sqlquery/snowflake_access_history:
+    driver: snowflake
+    datasource: "${env:SNOWFLAKE_USER}:${env:SNOWFLAKE_PASSWORD}@${env:SNOWFLAKE_ACCOUNT}/SNOWFLAKE/ACCOUNT_USAGE?warehouse=${env:SNOWFLAKE_WAREHOUSE}&role=${env:SNOWFLAKE_ROLE}"
+    storage: file_storage
+    collection_interval: 300s
+    queries:
+      - sql: |
+          SELECT TO_VARCHAR(QUERY_START_TIME, 'YYYY-MM-DD"T"HH24:MI:SS.FF9TZH:TZM') AS TRACKING_TS,
+                 COALESCE(USER_NAME, '') AS USER_NAME,
+                 TO_JSON(OBJECT_CONSTRUCT(*)) AS BODY
+          FROM SNOWFLAKE.ACCOUNT_USAGE.ACCESS_HISTORY
+          WHERE QUERY_START_TIME > TO_TIMESTAMP_TZ(?, 'YYYY-MM-DD"T"HH24:MI:SS.FF9TZH:TZM')
+            AND QUERY_START_TIME <= DATEADD(hour, -3, CURRENT_TIMESTAMP())
+          ORDER BY QUERY_START_TIME
+          LIMIT 1000
+        tracking_column: TRACKING_TS
+        tracking_start_value: "${env:SNOWFLAKE_LOGS_START:-2026-10-25T00:00:00.000000000+00:00}"
+        logs:
+          - body_column: BODY
+            attribute_columns: [USER_NAME]
+
+  sqlquery/snowflake_query_history:
+    driver: snowflake
+    datasource: "${env:SNOWFLAKE_USER}:${env:SNOWFLAKE_PASSWORD}@${env:SNOWFLAKE_ACCOUNT}/SNOWFLAKE/ACCOUNT_USAGE?warehouse=${env:SNOWFLAKE_WAREHOUSE}&role=${env:SNOWFLAKE_ROLE}"
+    storage: file_storage
+    collection_interval: 300s
+    queries:
+      - sql: |
+          SELECT TO_VARCHAR(END_TIME, 'YYYY-MM-DD"T"HH24:MI:SS.FF9TZH:TZM') AS TRACKING_TS,
+                 COALESCE(USER_NAME, '') AS USER_NAME,
+                 COALESCE(WAREHOUSE_NAME, '') AS WAREHOUSE_NAME,
+                 COALESCE(EXECUTION_STATUS, '') AS EXECUTION_STATUS,
+                 TO_JSON(OBJECT_CONSTRUCT(*)) AS BODY
+          FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
+          WHERE END_TIME > TO_TIMESTAMP_TZ(?, 'YYYY-MM-DD"T"HH24:MI:SS.FF9TZH:TZM')
+            AND END_TIME <= DATEADD(hour, -1, CURRENT_TIMESTAMP())
+          ORDER BY END_TIME
+          LIMIT 1000
+        tracking_column: TRACKING_TS
+        tracking_start_value: "${env:SNOWFLAKE_LOGS_START:-2026-10-25T00:00:00.000000000+00:00}"
+        logs:
+          - body_column: BODY
+            attribute_columns: [USER_NAME, WAREHOUSE_NAME, EXECUTION_STATUS]
+
+service:
+  pipelines:
+    logs/snowflake:
+      receivers:
+        - sqlquery/snowflake_login_history
+        - sqlquery/snowflake_access_history
+        - sqlquery/snowflake_query_history
+      exporters: [file/logs]
+      # exporters: [file/logs, splunk_hec]

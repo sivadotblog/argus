@@ -1,0 +1,8 @@
+# Argus full profile: the last layer. It holds only the extension list.
+#
+# Lists replace across --config files, so every extension defined in any layer is
+# listed here once. A missing entry passes `validate` but fails at startup
+# (for example: unknown azureauth extension "azure_auth").
+
+service:
+  extensions: [azure_auth, file_storage]

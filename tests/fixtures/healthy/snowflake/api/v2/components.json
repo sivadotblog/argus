@@ -1,0 +1,100 @@
+{
+  "page": {
+    "id": "94s7z8vpy1n8",
+    "name": "Snowflake",
+    "url": "https://status.snowflake.com",
+    "time_zone": "Etc/UTC",
+    "updated_at": "2026-10-25T11:29:12.040Z"
+  },
+  "components": [
+    {
+      "id": "11xcf2b7py08",
+      "name": "Azure - East US (Virginia)",
+      "status": "operational",
+      "created_at": "2026-01-30T01:49:54.848Z",
+      "updated_at": "2026-05-22T08:57:45.148Z",
+      "position": 32,
+      "description": null,
+      "showcase": false,
+      "start_date": null,
+      "group_id": null,
+      "page_id": "94s7z8vpy1n8",
+      "group": true,
+      "only_show_if_degraded": false,
+      "components": [
+        "9drxp0b48xp9",
+        "22zn346ybn8l",
+        "xl9p5mp521rb",
+        "bfpcyzsq5thd",
+        "p3628rxhztbk",
+        "yn88shysrznw",
+        "gnrqskxd0y3n",
+        "9w9y4lbq39w4",
+        "fm6wrv1bcqnv",
+        "mgzzzt5cl4d3",
+        "z6t3359t6m2t",
+        "v4fn5hl62hsk"
+      ]
+    },
+    {
+      "id": "4pbr6y23kkht",
+      "name": "Azure - East US 2 (Virginia)",
+      "status": "operational",
+      "created_at": "2019-01-03T16:59:36.136Z",
+      "updated_at": "2026-05-22T08:57:45.157Z",
+      "position": 33,
+      "description": null,
+      "showcase": false,
+      "start_date": null,
+      "group_id": null,
+      "page_id": "94s7z8vpy1n8",
+      "group": true,
+      "only_show_if_degraded": false,
+      "components": [
+        "gftdll6pf43g",
+        "nrg0s4c1jh3b",
+        "bbx7v2mp09x8",
+        "xkkfhzzgkf3k",
+        "rywt65fg7swh",
+        "cqxvcsmfq5mv",
+        "j6n2b93v0qvp",
+        "98c5586nx8zb",
+        "p2tdpc5ftsm1",
+        "ld7k5zxhk469",
+        "0df2n68d5788",
+        "227yh5znvtr5",
+        "hh6f39mtrtcw"
+      ]
+    },
+    {
+      "id": "p84jh86qs3dv",
+      "name": "Azure - West Europe (Netherlands)",
+      "status": "operational",
+      "created_at": "2019-01-03T17:00:44.694Z",
+      "updated_at": "2026-05-22T08:57:45.200Z",
+      "position": 38,
+      "description": null,
+      "showcase": false,
+      "start_date": null,
+      "group_id": null,
+      "page_id": "94s7z8vpy1n8",
+      "group": true,
+      "only_show_if_degraded": false,
+      "components": [
+        "3tfpqbqbtfq8",
+        "llw3pq2q914h",
+        "5j93n2jzlspc",
+        "z4kgbwd5p4s5",
+        "hd3prfh7pfvl",
+        "96vp0zj7hn4v",
+        "pkz2klp0m9c6",
+        "xydbq0zwlnh1",
+        "tk4rg9fr7zjv",
+        "ndj4nj6c7230",
+        "53qp92zpkj03",
+        "mdl8xn8ps1q3",
+        "yt27y2f38nw6"
+      ]
+    }
+  ]
+}

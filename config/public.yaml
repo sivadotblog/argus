@@ -1,0 +1,98 @@
+# Argus public layer: vendor status feeds and a web check. No credentials.
+#
+# How a check works:
+#   - One target per check, and at most one validation per target, so each result is
+#     a clean 0 or 1.
+#   - The URL fragment names the check: #<vendor>.<service>.<region>. The HTTP client does
+#     not send the fragment, but it stays in the http.url attribute, which is how the
+#     output tells regions apart.
+#   - json_path is gjson syntax with plain dotted paths ("status.indicator"). The "$."
+#     prefix in the receiver README does not resolve.
+#   - A missing path counts as failed, so a feed that changes shape cannot pass silently.
+#
+# To add a region filter: copy a target, change the region in the path and the fragment.
+# Feed shapes: README.md, "Region filters".
+#
+# The *_STATUS_BASE_URL and WEB_CHECK_URL variables exist only so tests/fixtures.sh can
+# point these checks at recorded feeds. Leave them unset in production.
+
+receivers:
+  http_check/status:
+    collection_interval: 60s
+    metrics:
+      httpcheck.validation.passed:
+        enabled: true
+      httpcheck.validation.failed:
+        enabled: true
+    targets:
+      # --- Snowflake (Statuspage) ---
+      - endpoint: "${env:SNOWFLAKE_STATUS_BASE_URL:-https://status.snowflake.com}/api/v2/status.json#snowflake.overall.global"
+        validations:
+          - json_path: 'status.indicator'
+            equals: "none"
+      - endpoint: "${env:SNOWFLAKE_STATUS_BASE_URL:-https://status.snowflake.com}/api/v2/components.json#snowflake.azure.eastus"
+        validations:
+          - json_path: 'components.#(name=="Azure - East US (Virginia)").status'
+            equals: "operational"
+      - endpoint: "${env:SNOWFLAKE_STATUS_BASE_URL:-https://status.snowflake.com}/api/v2/components.json#snowflake.azure.eastus2"
+        validations:
+          - json_path: 'components.#(name=="Azure - East US 2 (Virginia)").status'
+            equals: "operational"
+
+      # --- Databricks on Azure (status.io) ---
+      - endpoint: "${env:DATABRICKS_STATUS_BASE_URL:-https://api.status.io}/1.0/status/5d49ec10226b9e13cb6a422e#databricks.overall.global"
+        validations:
+          - json_path: 'result.status_overall.status_code'
+            equals: "100"
+      - endpoint: "${env:DATABRICKS_STATUS_BASE_URL:-https://api.status.io}/1.0/status/5d49ec10226b9e13cb6a422e#databricks.compute.eastus"
+        validations:
+          - json_path: 'result.status.#(name=="Compute").containers.#(name=="East US").status'
+            equals: "Operational"
+      - endpoint: "${env:DATABRICKS_STATUS_BASE_URL:-https://api.status.io}/1.0/status/5d49ec10226b9e13cb6a422e#databricks.compute.eastus2"
+        validations:
+          - json_path: 'result.status.#(name=="Compute").containers.#(name=="East US 2").status'
+            equals: "Operational"
+      - endpoint: "${env:DATABRICKS_STATUS_BASE_URL:-https://api.status.io}/1.0/status/5d49ec10226b9e13cb6a422e#databricks.sql.eastus"
+        validations:
+          - json_path: 'result.status.#(name=="Databricks SQL").containers.#(name=="East US").status'
+            equals: "Operational"
+      - endpoint: "${env:DATABRICKS_STATUS_BASE_URL:-https://api.status.io}/1.0/status/5d49ec10226b9e13cb6a422e#databricks.sql.eastus2"
+        validations:
+          - json_path: 'result.status.#(name=="Databricks SQL").containers.#(name=="East US 2").status'
+            equals: "Operational"
+
+      # --- HashiCorp (incident.io) ---
+      # Only affected components carry a status, so a check counts the entries for one
+      # component ID and expects 0. Region names repeat under several products, so the
+      # ID (from summary.structure) is the only safe key.
+      - endpoint: "${env:HASHICORP_STATUS_BASE_URL:-https://status.hashicorp.com}/proxy/status.hashicorp.com#hashicorp.overall.global"
+        validations:
+          - json_path: 'summary.ongoing_incidents.#'
+            equals: "0"
+      # HCP Vault Dedicated, Azure-East US
+      - endpoint: "${env:HASHICORP_STATUS_BASE_URL:-https://status.hashicorp.com}/proxy/status.hashicorp.com#hashicorp.vault-dedicated.eastus"
+        validations:
+          - json_path: 'summary.affected_components.#(component_id=="01K7FBWXHZYYWNBR12D9AQQ7CE")#|#'
+            equals: "0"
+      # HCP Vault Dedicated, Azure-East US 2
+      - endpoint: "${env:HASHICORP_STATUS_BASE_URL:-https://status.hashicorp.com}/proxy/status.hashicorp.com#hashicorp.vault-dedicated.eastus2"
+        validations:
+          - json_path: 'summary.affected_components.#(component_id=="01K7FBWXHZDC8NV69JXVFBNESW")#|#'
+            equals: "0"
+      # HCP Terraform (no region)
+      - endpoint: "${env:HASHICORP_STATUS_BASE_URL:-https://status.hashicorp.com}/proxy/status.hashicorp.com#hashicorp.terraform.global"
+        validations:
+          - json_path: 'summary.affected_components.#(component_id=="01K7FBWXHZSMHNQWYKSQFKHVHN")#|#'
+            equals: "0"
+
+  http_check/web:
+    collection_interval: 60s
+    targets:
+      - endpoint: "${env:WEB_CHECK_URL:-https://siva.blog/}#web.siva-blog.global"
+
+service:
+  pipelines:
+    metrics/public:
+      receivers: [http_check/status, http_check/web]
+      exporters: [file/metrics]
+      # exporters: [file/metrics, splunk_hec]

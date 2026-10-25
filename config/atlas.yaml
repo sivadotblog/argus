@@ -1,0 +1,22 @@
+# Argus Atlas layer: MongoDB Atlas process, database, and disk metrics.
+# Status: configured and validated, not tested live (no credentials in this repo).
+#
+# Use a read-only Atlas API key (Project Read Only is enough). Alerts, events, and logs
+# stay off: Atlas alerts arrive by webhook, which needs an inbound listener, and Argus
+# only polls.
+
+receivers:
+  mongodbatlas:
+    public_key: ${env:MONGODB_ATLAS_PUBLIC_KEY}
+    private_key: ${env:MONGODB_ATLAS_PRIVATE_KEY}
+    granularity: PT1M
+    collection_interval: 3m
+    projects:
+      - name: "${env:MONGODB_ATLAS_PROJECT}"
+
+service:
+  pipelines:
+    metrics/atlas:
+      receivers: [mongodbatlas]
+      exporters: [file/metrics]
+      # exporters: [file/metrics, splunk_hec]
