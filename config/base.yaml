@@ -1,0 +1,47 @@
+# Argus base layer: outputs shared by every profile.
+#
+# Argus is configuration only. Each file in config/ is one layer, and the collector
+# merges them in the order of its --config flags:
+#
+#   public profile: base.yaml public.yaml
+#   full profile:   base.yaml public.yaml azure.yaml atlas.yaml snowflake-logs.yaml full.yaml
+#
+# Maps merge across layers; lists replace. So pipelines are map keys (metrics/public,
+# metrics/azure, ...) and the one service.extensions list lives only in full.yaml.
+#
+# Output contract: README.md, "Output".
+
+exporters:
+  # OTLP JSON, one export request per line.
+  file/metrics:
+    path: /var/lib/argus/metrics.jsonl
+    format: json
+    flush_interval: 1s
+    rotation:
+      max_megabytes: 100
+      max_backups: 3
+
+  file/logs:
+    path: /var/lib/argus/logs.jsonl
+    format: json
+    flush_interval: 1s
+    rotation:
+      max_megabytes: 100
+      max_backups: 3
+
+# BEGIN splunk_hec
+#   # Splunk HTTP Event Collector. To enable: uncomment this block (remove the
+#   # leading "# " from each line up to END) and add splunk_hec to the exporters
+#   # of each pipeline. tests/validate.sh validates this block uncommented.
+#   splunk_hec:
+#     endpoint: ${env:SPLUNK_HEC_ENDPOINT}
+#     token: ${env:SPLUNK_HEC_TOKEN}
+#     source: argus
+#     sourcetype: otel
+#     index: ${env:SPLUNK_HEC_INDEX}
+# END splunk_hec
+
+service:
+  telemetry:
+    logs:
+      level: info

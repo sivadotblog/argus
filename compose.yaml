@@ -1,0 +1,36 @@
+# Argus on Docker Compose.
+#   docker compose up -d argus                     public profile, no credentials
+#   docker compose --profile full up -d argus-full every source; needs .env
+# Output: ./data/metrics.jsonl and ./data/logs.jsonl
+# Linux hosts: run `mkdir -p data && chmod 777 data` first; the image runs as UID 10001.
+
+services:
+  argus:
+    image: otel/opentelemetry-collector-contrib:0.162.0
+    container_name: argus
+    command:
+      - --config=/etc/argus/base.yaml
+      - --config=/etc/argus/public.yaml
+    volumes:
+      - ./config:/etc/argus:ro
+      - ./data:/var/lib/argus
+    restart: unless-stopped
+
+  argus-full:
+    image: otel/opentelemetry-collector-contrib:0.162.0
+    container_name: argus-full
+    profiles: [full]
+    env_file:
+      - path: .env
+        required: false
+    command:
+      - --config=/etc/argus/base.yaml
+      - --config=/etc/argus/public.yaml
+      - --config=/etc/argus/azure.yaml
+      - --config=/etc/argus/atlas.yaml
+      - --config=/etc/argus/snowflake-logs.yaml
+      - --config=/etc/argus/full.yaml
+    volumes:
+      - ./config:/etc/argus:ro
+      - ./data:/var/lib/argus
+    restart: unless-stopped

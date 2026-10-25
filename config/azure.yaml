@@ -1,0 +1,48 @@
+# Argus Azure layer: Azure Monitor platform metrics for databases and web apps.
+# Status: configured and validated, not tested live (no credentials in this repo).
+#
+# Scope is the whole subscription: every resource of the listed services in it.
+# Resource groups are an optional narrowing, off by default.
+# The identity needs the Monitoring Reader role on each subscription.
+
+extensions:
+  azure_auth:
+    service_principal:
+      tenant_id: ${env:AZURE_TENANT_ID}
+      client_id: ${env:AZURE_CLIENT_ID}
+      client_secret: ${env:AZURE_CLIENT_SECRET}
+    # On AKS with workload identity, replace service_principal with:
+    # workload_identity:
+    #   tenant_id: ${env:AZURE_TENANT_ID}
+    #   client_id: ${env:AZURE_CLIENT_ID}
+    #   federated_token_file: /var/run/secrets/azure/tokens/azure-identity-token
+    # On a VM or container with a managed identity, replace it with:
+    # managed_identity:
+    #   client_id: ${env:AZURE_CLIENT_ID}   # omit for a system-assigned identity
+
+receivers:
+  azure_monitor:
+    subscription_ids: ["${env:AZURE_SUBSCRIPTION_ID}"]
+    # Every subscription the identity can read; use instead of subscription_ids:
+    # discover_subscriptions: true
+    # Off by default; narrows the subscription scope to these resource groups:
+    # resource_groups: [rg-data-prod]
+    auth:
+      authenticator: azure_auth
+    services:
+      - Microsoft.Web/sites
+      - Microsoft.DBforPostgreSQL/flexibleServers
+      - Microsoft.Sql/servers/databases
+      - Microsoft.DocumentDB/databaseAccounts
+      - Microsoft.Cache/redis
+    collection_interval: 300s
+    # With many subscriptions, the batch API cuts the number of calls. It uses a
+    # different endpoint and permission, so it is off here:
+    # use_batch_api: true
+
+service:
+  pipelines:
+    metrics/azure:
+      receivers: [azure_monitor]
+      exporters: [file/metrics]
+      # exporters: [file/metrics, splunk_hec]

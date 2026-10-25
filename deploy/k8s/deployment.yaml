@@ -1,0 +1,60 @@
+# Argus full profile on Kubernetes. Credentials come from a Secret you create:
+#   kubectl create secret generic argus-credentials --from-env-file=.env
+# Apply from the repository root: kubectl apply -k .
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argus
+  labels:
+    app.kubernetes.io/name: argus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: argus
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: argus
+    spec:
+      serviceAccountName: argus
+      containers:
+        - name: argus
+          image: otel/opentelemetry-collector-contrib:0.162.0
+          args:
+            - --config=/etc/argus/base.yaml
+            - --config=/etc/argus/public.yaml
+            - --config=/etc/argus/azure.yaml
+            - --config=/etc/argus/atlas.yaml
+            - --config=/etc/argus/snowflake-logs.yaml
+            - --config=/etc/argus/full.yaml
+          envFrom:
+            - secretRef:
+                name: argus-credentials
+          volumeMounts:
+            - name: config
+              mountPath: /etc/argus
+              readOnly: true
+            - name: data
+              mountPath: /var/lib/argus
+          securityContext:
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      volumes:
+        - name: config
+          configMap:
+            name: argus-config
+        # Output files and Snowflake tracking state. emptyDir is lost when the pod
+        # moves; use a PersistentVolumeClaim to keep tracking across reschedules.
+        - name: data
+          emptyDir: {}

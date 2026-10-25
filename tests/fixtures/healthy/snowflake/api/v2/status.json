@@ -1,0 +1,13 @@
+{
+  "page": {
+    "id": "94s7z8vpy1n8",
+    "name": "Snowflake",
+    "url": "https://status.snowflake.com",
+    "time_zone": "Etc/UTC",
+    "updated_at": "2026-10-25T11:29:12.040Z"
+  },
+  "status": {
+    "indicator": "none",
+    "description": "All Systems Operational"
+  }
+}
